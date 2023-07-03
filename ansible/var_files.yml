@@ -1,0 +1,5 @@
+---
+fqdn: 'example.com'
+server_alias: 'www.example.com'
+username: 'user'
+staging: 'test-user'

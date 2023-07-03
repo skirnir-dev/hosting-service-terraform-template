@@ -1,0 +1,246 @@
+---
+- hosts: all
+  become: true
+  vars_files:
+    - ./ansible/var_files.yml
+  tasks:
+    - name: Install required packages
+      dnf:
+        name: "{{ packages }}"
+        state: present
+      vars:
+        packages:
+          - glibc-langpack-ja
+          - git
+          - make
+          - patch
+          - rsync
+          - mariadb-server
+          - mysql-devel
+          - httpd
+          - httpd-devel
+          - mod_ssl
+          - php
+          - php-mbstring
+          - php-devel
+          - php-mhash
+          - php-pgsql
+          - php-mysqli
+          - php-xml
+          - php-gd
+          - php-intl
+          - php-curl
+          - php-zip
+          - php-opcache
+          - php-pecl-apcu
+          - php-pear
+          - postgresql-server
+          - libssh2
+          - libssh2-devel
+
+    - name: Install EPEL repository
+      dnf:
+        name: epel-release
+        state: present
+
+    - name: Install certbot
+      dnf:
+        name: "{{ packages }}"
+        state: present
+      vars:
+        packages:
+          - certbot
+          - python3-certbot-apache
+
+    - name: Reset php module
+      command: dnf -y module reset php
+      register: out
+    - debug: var=out.stdout_lines
+    - name: Enable php 7.4 module
+      command: dnf -y module enable php:7.4
+      register: out
+    - debug: var=out.stdout_lines
+    - name: Reset postgresql module
+      command: dnf -y module reset postgresql
+      register: out
+    - debug: var=out.stdout_lines
+    - name: Enable postgresql 12 module
+      command: dnf -y module enable postgresql:12
+      register: out
+    - debug: var=out.stdout_lines
+
+    - name: Set timezone
+      timezone:
+        name: Asia/Tokyo
+
+    - name: pecl install ssh2
+      shell: 'echo "autodetect" | pecl install channel://pecl.php.net/ssh2-1.3.1'
+      args:
+        creates: "/usr/lib64/php/modules/ssh2.so"
+
+    - name: ssh2.ini
+      copy:
+        src: ./ansible/etc/php.d/40-ssh2.ini
+        dest: /etc/php.d/40-ssh2.ini
+        owner: root
+        group: root
+
+    - name: Enable and start MariaDB
+      systemd:
+        name: mariadb.service
+        enabled: yes
+        state: started
+
+    - name: Enable and start PostgreSQL
+      systemd:
+        name: postgresql.service
+        enabled: yes
+        state: started
+
+    - name: initdb
+      shell: "postgresql-setup --initdb"
+      args:
+        creates: "/var/lib/pgsql/data/PG_VERSION"
+
+    - name: Update PostgreSQL settings
+      lineinfile:
+        path: /var/lib/pgsql/data/pg_hba.conf
+        regexp: '^host\s+all(.*)ident'
+        line: 'host\s+all\1md5'
+        backrefs: yes
+
+    - name: Enable and start Apache
+      systemd:
+        name: httpd.service
+        enabled: yes
+        state: started
+
+    - name: Enable and start PHP-FPM
+      systemd:
+        name: php-fpm.service
+        enabled: yes
+        state: started
+
+    - name: Upgrade all packages
+      dnf:
+        name: "*"
+        state: latest
+
+    - name: Update PHP settings
+      lineinfile:
+        path: /etc/php.ini
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+      loop:
+        - { regexp: '^memory_limit = 128M$', line: 'memory_limit = 384M' }
+        - { regexp: '^upload_max_filesize = 2M$', line: 'upload_max_filesize = 50M' }
+        - { regexp: '^post_max_size = 8M$', line: 'post_max_size = 50M' }
+        - { regexp: '^expose_php = On$', line: 'expose_php = Off' }
+    - name: Let's Encrypt
+      command: certbot --apache -d {{ server_alias }} -d {{ fqdn }} --email ohkouchi@skirnir.co.jp --agree-tos --keep-until-expiring --non-interactive
+      register: out
+    - debug: var=out.stdout_lines
+    - name: Let's Encrypt for staging
+      command: certbot --apache -d {{ staging }}.{{ fqdn }} --email ohkouchi@skirnir.co.jp --agree-tos --keep-until-expiring --non-interactive
+      register: out
+    - debug: var=out.stdout_lines
+    - name: auto update cert keys
+      cron:
+        name: certbot_renew
+        cron_file: certbot_renew
+        user: root
+        special_time: weekly
+        job: certbot renew --post-hook "systemctl reload httpd"
+
+    - name: dirs.conf
+      copy:
+        src: ./ansible/etc/httpd/conf.d/dirs.conf
+        dest: /etc/httpd/conf.d/dirs.conf
+        owner: root
+        group: root
+
+    - name: VirtualHost directives
+      template:
+        src: ./ansible/etc/httpd/conf.d/fqdn.conf
+        dest: /etc/httpd/conf.d/{{ fqdn }}.conf
+        owner: root
+        group: root
+
+    - name: VirtualHost le-ssl directives
+      template:
+        src: ./ansible/etc/httpd/conf.d/fqdn-le-ssl.conf
+        dest: /etc/httpd/conf.d/{{ fqdn }}-le-ssl.conf
+        owner: root
+        group: root
+
+    - name: VirtualHost staging directives
+      template:
+        src: ./ansible/etc/httpd/conf.d/staging.conf
+        dest: /etc/httpd/conf.d/{{ staging }}.{{ fqdn }}.conf
+        owner: root
+        group: root
+
+    - name: VirtualHost staging-le-ssl directives
+      template:
+        src: ./ansible/etc/httpd/conf.d/staging-le-ssl.conf
+        dest: /etc/httpd/conf.d/test-quartett.quartett.co.jp-le-ssl.conf
+        owner: root
+        group: root
+
+    - name: Reload service httpd, in all cases
+      service:
+        name: httpd
+        state: reloaded
+
+    ## see https://gist.github.com/onlime/8767e4e86d4205e32fbe354c8bea626c
+    - name: Composer | Install Composer latest-stable
+      get_url:
+        url: https://getcomposer.org/download/latest-stable/composer.phar
+        checksum: 'sha256:https://getcomposer.org/download/latest-stable/composer.phar.sha256sum'
+        dest: /usr/local/bin/composer.phar
+        mode: 0755
+
+    - name: Composer | Symlink composer.phar
+      file:
+        src: composer.phar
+        dest: /usr/local/bin/composer
+        state: link
+
+    - name: Create SSH directories and files
+      file:
+        path: "{{ item.path }}"
+        state: directory
+        mode: 0700
+        owner: "{{ item.owner }}"
+        group: "{{ item.group }}"
+      with_items:
+        - { path: '/var/www/.ssh', owner: 'apache', group: 'apache' }
+        - { path: '/usr/share/httpd/.ssh', owner: 'apache', group: 'apache' }
+        - { path: "/home/{{ username }}/.ssh", owner: "{{ username }}", group: "{{ username }}" }
+
+    - name: Add localhost to known_hosts
+      shell: |
+        ssh-keyscan localhost | tee -a /usr/share/httpd/.ssh/known_hosts
+      args:
+        creates: "/usr/share/httpd/.ssh/known_hosts"
+
+    - name: Set permissions on known_hosts
+      file:
+        path: /usr/share/httpd/.ssh/known_hosts
+        mode: 0444
+
+    - name: Generate SSH key for apache
+      shell: |
+        sudo -u apache ssh-keygen -f /var/www/.ssh/id_rsa -N ''
+      args:
+        creates: "/var/www/.ssh/id_rsa.pub"
+
+    - name: register id_rsa.pub
+      shell: cat /var/www/.ssh/id_rsa.pub
+      register: id_rsa_pub
+
+    - name: Add authorized_keys entry
+      lineinfile:
+        path: "/home/{{ username }}/.ssh/authorized_keys"
+        line: 'from="127.0.0.1,::1",restrict,pty {{ id_rsa_pub.stdout }}'
+        insertafter: EOF
