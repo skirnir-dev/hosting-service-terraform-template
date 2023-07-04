@@ -35,13 +35,20 @@
           - php-pecl-apcu
           - php-pear
           - postgresql-server
-          - libssh2
-          - libssh2-devel
 
     - name: Install EPEL repository
       dnf:
         name: epel-release
         state: present
+
+    - name: Install EPEL packages
+      dnf:
+        name: "{{ packages }}"
+        state: present
+      vars:
+        packages:
+          - libssh2
+          - libssh2-devel
 
     - name: Install certbot
       dnf:
@@ -91,12 +98,6 @@
         enabled: yes
         state: started
 
-    - name: Enable and start PostgreSQL
-      systemd:
-        name: postgresql.service
-        enabled: yes
-        state: started
-
     - name: initdb
       shell: "postgresql-setup --initdb"
       args:
@@ -108,6 +109,12 @@
         regexp: '^host\s+all(.*)ident'
         line: 'host\s+all\1md5'
         backrefs: yes
+
+    - name: Enable and start PostgreSQL
+      systemd:
+        name: postgresql.service
+        enabled: yes
+        state: started
 
     - name: Enable and start Apache
       systemd:
