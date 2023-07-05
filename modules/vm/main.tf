@@ -26,6 +26,11 @@ resource "azurerm_linux_virtual_machine" "vm_web" {
     sku       = "8-gen2"
     version   = "latest"
   }
+  plan {
+    name      = "8-gen2"
+    product   = "almalinux"
+    publisher = "almalinux"
+  }
   depends_on = [
     var.public_ip
   ]
