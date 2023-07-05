@@ -104,11 +104,10 @@
         creates: "/var/lib/pgsql/data/PG_VERSION"
 
     - name: Update PostgreSQL settings
-      lineinfile:
+      replace:
         path: /var/lib/pgsql/data/pg_hba.conf
-        regexp: '^host\s+all(.*)ident'
-        line: 'host\s+all\1md5'
-        backrefs: yes
+        regexp: '^host(\s+all)(.*)ident$'
+        replace: 'host\1\2md5'
 
     - name: Enable and start PostgreSQL
       systemd:
