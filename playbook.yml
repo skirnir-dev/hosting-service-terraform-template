@@ -158,6 +158,22 @@
         special_time: weekly
         job: certbot renew --post-hook "systemctl reload httpd"
 
+    - name: Change permissions
+      file:
+        path: /var/www/html
+        owner: "{{ username }}"
+        group: "{{ username }}"
+
+    - name: Create hosting directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ username }}"
+        group: "{{ username }}"
+      with_items:
+        - "/var/www/html/{{ fqdn }}"
+        - "/var/www/html/{{ staging }}.{{ fqdn }}"
+
     - name: dirs.conf
       copy:
         src: ./ansible/etc/httpd/conf.d/dirs.conf
