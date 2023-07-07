@@ -189,7 +189,7 @@
     - name: VirtualHost staging-le-ssl directives
       template:
         src: ./ansible/etc/httpd/conf.d/staging-le-ssl.conf
-        dest: /etc/httpd/conf.d/test-quartett.quartett.co.jp-le-ssl.conf
+        dest: /etc/httpd/conf.d/{{ staging }}.{{ fqdn }}-le-ssl.conf
         owner: root
         group: root
 
