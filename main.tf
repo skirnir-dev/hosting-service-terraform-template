@@ -37,6 +37,16 @@ module "backup" {
   virtual_machine = module.virtual_machine.vm_web
 }
 
+module "insights" {
+  source            = "./modules/insights"
+  resource_group    = azurerm_resource_group.rg
+  fqdn              = var.fqdn
+  username          = var.username
+  location          = var.location
+  lists_webtest_url = "https://${var.fqdn}/products/list.php"
+  top_webtest_url   = "https://${var.fqdn}/"
+}
+
 resource "ansible_host" "web_server" {
   name   = "${var.username}.${var.location}.cloudapp.azure.com"
   groups = ["web"]
