@@ -29,6 +29,14 @@ module "networks" {
   location       = var.location
 }
 
+module "backup" {
+  source          = "./modules/backup"
+  resource_group  = azurerm_resource_group.rg
+  username        = var.username
+  location        = var.location
+  virtual_machine = module.virtual_machine.vm_web
+}
+
 resource "ansible_host" "web_server" {
   name   = "${var.username}.${var.location}.cloudapp.azure.com"
   groups = ["web"]
