@@ -4,6 +4,18 @@
   vars_files:
     - ./ansible/var_files.yml
   tasks:
+    - name: Update waagent.conf
+      lineinfile:
+        path: /etc/waagent.conf
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+      loop:
+        - { regexp: '^ResourceDisk\.Format=.*$', line: 'ResourceDisk.Format=y' }
+        - { regexp: '^ResourceDisk\.Filesystem=.*$', line: 'ResourceDisk.Filesystem=ext4' }
+        - { regexp: '^ResourceDisk\.MountPoint=.*$', line: 'ResourceDisk.MountPoint=/mnt/resource' }
+        - { regexp: '^ResourceDisk\.EnableSwap=.*$', line: 'ResourceDisk.EnableSwap=y' }
+        - { regexp: '^ResourceDisk\.SwapSizeMB=.*$', line: 'ResourceDisk.SwapSizeMB=3072' }
+
     - name: Install required packages
       dnf:
         name: "{{ packages }}"
