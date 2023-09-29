@@ -4,6 +4,9 @@
   vars_files:
     - ./ansible/var_files.yml
   tasks:
+    - name: Disable SELinux
+      ansible.posix.selinux: state=disabled
+
     - name: Update waagent.conf
       lineinfile:
         path: /etc/waagent.conf
