@@ -281,3 +281,10 @@
         path: "/home/{{ username }}/.ssh/authorized_keys"
         line: 'from="127.0.0.1,::1",restrict,pty {{ id_rsa_pub.stdout }}'
         insertafter: EOF
+
+    # - name: authorized_keys
+    #   copy:
+    #     src: ./ansible/home/username/.ssh/authorized_keys
+    #     dest: "/home/{{ username }}/.ssh/authorized_keys"
+    #     owner: "{{ username }}"
+    #     group: "{{ username }}"
