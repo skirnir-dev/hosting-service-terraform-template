@@ -113,23 +113,6 @@
         enabled: yes
         state: started
 
-    - name: initdb
-      shell: "postgresql-setup --initdb"
-      args:
-        creates: "/var/lib/pgsql/data/PG_VERSION"
-
-    - name: Update PostgreSQL settings
-      replace:
-        path: /var/lib/pgsql/data/pg_hba.conf
-        regexp: '^host(\s+all)(.*)ident$'
-        replace: 'host\1\2md5'
-
-    - name: Enable and start PostgreSQL
-      systemd:
-        name: postgresql.service
-        enabled: yes
-        state: started
-
     - name: Enable and start Apache
       systemd:
         name: httpd.service
@@ -146,6 +129,23 @@
       dnf:
         name: "*"
         state: latest
+
+    - name: initdb
+      shell: "postgresql-setup --initdb"
+      args:
+        creates: "/var/lib/pgsql/data/PG_VERSION"
+
+    - name: Update PostgreSQL settings
+      replace:
+        path: /var/lib/pgsql/data/pg_hba.conf
+        regexp: '^host(\s+all)(.*)ident$'
+        replace: 'host\1\2md5'
+
+    - name: Enable and start PostgreSQL
+      systemd:
+        name: postgresql.service
+        enabled: yes
+        state: started
 
     - name: Update PHP settings
       lineinfile:
