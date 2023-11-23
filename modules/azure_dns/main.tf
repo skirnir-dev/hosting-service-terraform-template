@@ -47,4 +47,3 @@ resource "azurerm_dns_txt_record" "txt" {
     value = "v=spf1 include:example.com ~all"
   }
 }
-
