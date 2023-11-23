@@ -13,12 +13,29 @@ module "virtual_machine" {
   pubkey_resource_group_name = var.pubkey_resource_group_name
 }
 
-module "dns" {
-  source         = "./modules/dns"
+module "azure_dns" {
+  source         = "./modules/azure_dns"
   resource_group = azurerm_resource_group.rg
   vm_web_ip      = module.networks.public_ip
   fqdn           = var.fqdn
   username       = var.username
+}
+
+data "cloudflare_zone" "zone" {
+  name = var.fqdn
+}
+
+data "cloudflare_accounts" "main" {
+  name = var.cloudflare_account_name
+}
+
+module "cloudflare_dns" {
+  source          = "./modules/cloudflare_dns"
+  fqdn            = var.fqdn
+  staging         = var.staging
+  username        = var.username
+  cloudflare_zone = data.cloudflare_zone.zone
+  public_ip       = module.networks.public_ip
 }
 
 module "networks" {
@@ -45,6 +62,24 @@ module "insights" {
   location          = var.location
   lists_webtest_url = "https://${var.fqdn}/products/list.php"
   top_webtest_url   = "https://${var.fqdn}/"
+}
+
+module "zero_trust" {
+  source              = "./modules/zero_trust"
+  fqdn                = var.fqdn
+  staging             = var.staging
+  username            = var.username
+  account_id          = data.cloudflare_accounts.main.accounts[0].id
+  cloudflare_zone     = data.cloudflare_zone.zone
+  cloudflare_zone_xyz = data.cloudflare_zone.zone_xyz
+}
+
+module "waf" {
+  source          = "./modules/waf"
+  fqdn            = var.fqdn
+  staging         = var.staging
+  username        = var.username
+  cloudflare_zone = data.cloudflare_zone.zone
 }
 
 resource "ansible_host" "web_server" {

@@ -22,4 +22,7 @@ variable "pubkey_resource_group_name" {
   default = "pubkey-rg"
   type    = string
 }
-
+variable "cloudflare_account_name" {
+  default = "example"
+  type    = string
+}

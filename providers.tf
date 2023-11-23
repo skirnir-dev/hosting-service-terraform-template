@@ -20,9 +20,16 @@ terraform {
       version = "~> 1.1.0"
       source  = "ansible/ansible"
     }
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 4.19"
+    }
   }
 }
 
 provider "azurerm" {
   features {}
+}
+provider "cloudflare" {
+  api_token = var.cloudflare_api_token
 }
