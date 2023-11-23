@@ -189,6 +189,36 @@
         - "/var/www/html/{{ fqdn }}"
         - "/var/www/html/{{ staging }}.{{ fqdn }}"
 
+    - name: Change permissions
+      file:
+        path: "/var/www/html/{{ fqdn }}/{{ item.path }}"
+        owner: "{{ item.owner }}"
+        group: "{{ item.owner }}"
+        mode: u=rwX,g=rX,o=rX
+        recurse: yes
+      with_items:
+      - { path: "./", owner: "{{ username }}" }
+      - { path: "./html/upload", owner: "apache" }
+      - { path: "./data/Smarty/templates_c", owner: "apache" }
+      - { path: "./data/cache", owner: "apache" }
+      - { path: "./data/upload", owner: "apache" }
+      - { path: "./data/logs",  owner: "apache" }
+
+    - name: Change permissions to staging
+      file:
+        path: "/var/www/html/{{ staging }}.{{ fqdn }}/{{ item.path }}"
+        owner: "{{ item.owner }}"
+        group: "{{ item.owner }}"
+        mode: u=rwX,g=rX,o=rX
+        recurse: yes
+      with_items:
+      - { path: "./", owner: "{{ username }}" }
+      - { path: "./html/upload", owner: "apache" }
+      - { path: "./data/Smarty/templates_c", owner: "apache" }
+      - { path: "./data/cache", owner: "apache" }
+      - { path: "./data/upload", owner: "apache" }
+      - { path: "./data/logs",  owner: "apache" }
+
     - name: dirs.conf
       copy:
         src: ./ansible/etc/httpd/conf.d/dirs.conf
