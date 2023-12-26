@@ -24,6 +24,10 @@ terraform {
       source  = "cloudflare/cloudflare"
       version = "~> 4.19"
     }
+    mackerel = {
+      source  = "mackerelio-labs/mackerel"
+      version = "~> 0.3.2"
+    }
   }
 }
 
@@ -32,4 +36,7 @@ provider "azurerm" {
 }
 provider "cloudflare" {
   api_token = var.cloudflare_api_token
+}
+provider "mackerel" {
+  api_key = var.mackerel_api_key
 }
