@@ -82,6 +82,12 @@ module "waf" {
   cloudflare_zone = data.cloudflare_zone.zone
 }
 
+module "mackerel" {
+  source       = "./modules/mackerel"
+  external_url = "https://${var.fqdn}"
+  name         = var.fqdn
+}
+
 resource "ansible_host" "web_server" {
   name   = "${var.username}.${var.location}.cloudapp.azure.com"
   groups = ["web"]

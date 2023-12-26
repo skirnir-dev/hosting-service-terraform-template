@@ -26,3 +26,6 @@ variable "cloudflare_account_name" {
   default = "example"
   type    = string
 }
+variable "mackerel_api_key" {
+  type = string
+}
