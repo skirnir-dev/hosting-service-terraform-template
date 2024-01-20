@@ -111,6 +111,7 @@ resource "cloudflare_access_policy" "staging_onetimepin" {
   name           = "one-time pin"
   precedence     = "2"
   decision       = "allow"
+  zone_id        = var.cloudflare_zone.id
 
   include {
     login_method = [

@@ -1,4 +1,4 @@
-variable "vm_web_ip" {
+variable "public_ip" {
   description = "The public IP address of the VM."
 }
 variable "fqdn" {
