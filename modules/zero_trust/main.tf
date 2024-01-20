@@ -69,8 +69,8 @@ resource "cloudflare_access_group" "allow_email_domain" {
 
   include {
     email_domain = [
-      "@example.com",
-      "@skirnir.co.jp"
+      "example.com",
+      "skirnir.co.jp"
     ]
   }
 }
@@ -98,6 +98,7 @@ resource "cloudflare_access_policy" "staging_bypass_ips" {
   name           = "許可IP"
   precedence     = "1"
   decision       = "bypass"
+  zone_id        = var.cloudflare_zone.id
 
   include {
     group = [
@@ -131,6 +132,7 @@ resource "cloudflare_access_policy" "admin_bypass_ips" {
   name           = "office"
   precedence     = "1"
   decision       = "bypass"
+  zone_id        = var.cloudflare_zone.id
 
   include {
     group = [
@@ -144,6 +146,7 @@ resource "cloudflare_access_policy" "admin_onetimepin" {
   name           = "one-time pin"
   precedence     = "2"
   decision       = "allow"
+  zone_id        = var.cloudflare_zone.id
 
   include {
     login_method = [
@@ -163,6 +166,7 @@ resource "cloudflare_access_policy" "certbot_skip_bypass" {
   name           = "skip"
   precedence     = "1"
   decision       = "bypass"
+  zone_id        = var.cloudflare_zone.id
 
   include {
     everyone = true
