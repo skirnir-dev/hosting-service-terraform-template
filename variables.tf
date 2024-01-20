@@ -26,6 +26,12 @@ variable "cloudflare_account_name" {
   default = "example"
   type    = string
 }
+variable "cloudflare_api_token" {
+  type = string
+}
+variable "sendgrid_api_key" {
+  type = string
+}
 variable "mackerel_api_key" {
   type = string
 }
