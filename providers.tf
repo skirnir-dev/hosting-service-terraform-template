@@ -28,6 +28,10 @@ terraform {
       source  = "mackerelio-labs/mackerel"
       version = "~> 0.3.2"
     }
+    sendgrid = {
+      source  = "registry.terraform.io/kenzo0107/sendgrid"
+      version = "~> 0.0.10"
+    }
   }
 }
 
@@ -39,4 +43,7 @@ provider "cloudflare" {
 }
 provider "mackerel" {
   api_key = var.mackerel_api_key
+}
+provider "sendgrid" {
+  api_key = var.sendgrid_api_key
 }
