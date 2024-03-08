@@ -19,12 +19,13 @@ resource "cloudflare_access_application" "staging" {
 }
 
 resource "cloudflare_access_application" "admin" {
-  account_id                   = var.account_id
-  allowed_idps                 = []
-  app_launcher_visible         = true
-  auto_redirect_to_identity    = false
-  custom_deny_message          = null
-  custom_deny_url              = null
+  account_id                = var.account_id
+  allowed_idps              = []
+  app_launcher_visible      = true
+  auto_redirect_to_identity = false
+  custom_deny_message       = null
+  custom_deny_url           = null
+
   custom_non_identity_deny_url = null
   custom_pages                 = []
   domain                       = "${var.fqdn}/admin"
@@ -62,7 +63,6 @@ resource "cloudflare_access_application" "certbot_skip" {
   type                      = "self_hosted"
 }
 
-
 resource "cloudflare_access_group" "allow_email_domain" {
   account_id = var.account_id
   name       = "Allow domains"
@@ -70,7 +70,6 @@ resource "cloudflare_access_group" "allow_email_domain" {
   include {
     email_domain = [
       "example.com",
-      "skirnir.co.jp"
     ]
   }
 }
@@ -86,7 +85,6 @@ resource "cloudflare_access_group" "allow_ips_office" {
   }
 }
 
-
 data "cloudflare_access_identity_provider" "onetimepin" {
   name       = ""
   account_id = var.account_id
@@ -94,7 +92,6 @@ data "cloudflare_access_identity_provider" "onetimepin" {
 
 resource "cloudflare_access_policy" "staging_bypass_ips" {
   application_id = cloudflare_access_application.staging.id
-  zone_id        = var.cloudflare_zone.id
   name           = "許可IP"
   precedence     = "1"
   decision       = "bypass"
@@ -125,7 +122,6 @@ resource "cloudflare_access_policy" "staging_onetimepin" {
     ]
   }
 }
-
 
 resource "cloudflare_access_policy" "admin_bypass_ips" {
   application_id = cloudflare_access_application.admin.id
