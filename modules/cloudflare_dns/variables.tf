@@ -13,3 +13,9 @@ variable "username" {
 variable "cloudflare_zone" {
   description = "The name of the Cloudflare zone."
 }
+variable "sendgrid_sender_dns" {
+  description = "The DNS record for the SendGrid sender authentication."
+}
+variable "sendgrid_link_dns" {
+  description = "The DNS record for the SendGrid link branding."
+}
