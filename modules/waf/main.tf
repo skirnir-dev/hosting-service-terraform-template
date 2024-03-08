@@ -18,8 +18,8 @@ resource "cloudflare_ruleset" "custom_rule" {
     }
   }
   rules {
-    action      = "block"
-    description = "AWS ブロック"
+    action      = "managed_challenge"
+    description = "AWS マネージドチャレンジ"
     enabled     = true
     expression  = "(ip.geoip.asnum eq 16509 and not http.request.uri.path contains \"/.well-known/acme-challenge\")"
   }
@@ -44,14 +44,34 @@ resource "cloudflare_ruleset" "custom_rule" {
     action      = "managed_challenge"
     description = "/shopping reCAPTCHA"
     enabled     = true
-    expression  = "(http.request.uri.path contains \"/shopping\")"
+    expression  = "(http.request.uri.path contains \"/shopping\") or (http.request.uri.path contains \"/mypage\")"
   }
 }
+
+resource "cloudflare_ruleset" "ratelimit_rule" {
+  kind    = "zone"
+  name    = "default"
+  phase   = "http_ratelimit"
+  zone_id = var.cloudflare_zone.id
+  rules {
+    action      = "block"
+    description = "ログイン"
+    enabled     = true
+    expression  = "(http.request.uri.path contains \"/shopping\") or (http.request.uri.path contains \"/mypage\") or (http.request.uri.path contains \"/entry\")"
+    ratelimit {
+      characteristics     = ["ip.src", "cf.colo.id"]
+      mitigation_timeout  = 3600
+      period              = 10
+      requests_per_period = 5
+    }
+  }
+}
+
 resource "cloudflare_bot_management" "bot_fight_mode" {
   zone_id                         = var.cloudflare_zone.id
-  enable_js                       = false
-  sbfm_definitely_automated       = "block"
+  enable_js                       = true
+  sbfm_definitely_automated       = "managed_challenge"
   sbfm_verified_bots              = "allow"
   sbfm_static_resource_protection = false
-  optimize_wordpress              = true
+  optimize_wordpress              = false
 }
