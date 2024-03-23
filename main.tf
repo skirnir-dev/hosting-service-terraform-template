@@ -36,8 +36,8 @@ module "cloudflare_dns" {
   username            = var.username
   cloudflare_zone     = data.cloudflare_zone.zone
   public_ip           = module.networks.public_ip
-  sendgrid_sender_dns = sendgrid_sender_authentication.fqdn.dns
-  sendgrid_link_dns   = sendgrid_link_branding.fqdn.dns
+  sendgrid_sender_dns = module.sendgrid.sendgrid_sender_authentication_dns
+  sendgrid_link_dns   = module.sendgrid.sendgrid_link_branding_dns
 }
 
 module "networks" {
@@ -90,33 +90,19 @@ module "mackerel" {
   name         = var.fqdn
 }
 
-resource "sendgrid_api_key" "web" {
-  name = var.fqdn
-  scopes = [
-    "2fa_exempt",
-    "2fa_required",
-    "mail.send",
-    "sender_verification_exempt"
-  ]
+module "sendgrid" {
+  source = "./modules/sendgrid"
+  fqdn   = var.fqdn
 }
-
 output "sendgrid_api_key" {
-  value     = sendgrid_api_key.web.api_key
+  value     = module.sendgrid.sendgrid_api_key_web
   sensitive = true
 }
-
-resource "sendgrid_sender_authentication" "fqdn" {
-  domain = var.fqdn
-}
 output "sendgrid_sender_authentication_dns" {
-  value = sendgrid_sender_authentication.fqdn.dns
-}
-
-resource "sendgrid_link_branding" "fqdn" {
-  domain = var.fqdn
+  value = module.sendgrid.sendgrid_sender_authentication_dns
 }
 output "sendgrid_link_branding_dns" {
-  value = sendgrid_link_branding.fqdn.dns
+  value = module.sendgrid.sendgrid_link_branding_dns
 }
 
 resource "ansible_host" "web_server" {
