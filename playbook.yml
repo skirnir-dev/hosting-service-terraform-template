@@ -74,22 +74,15 @@
           - certbot
           - python3-certbot-apache
 
-    - name: Reset php module
-      command: dnf -y module reset php
-      register: out
-    - debug: var=out.stdout_lines
-    - name: Enable php 7.4 module
-      command: dnf -y module enable php:7.4
-      register: out
-    - debug: var=out.stdout_lines
-    - name: Reset postgresql module
-      command: dnf -y module reset postgresql
-      register: out
-    - debug: var=out.stdout_lines
-    - name: Enable postgresql 12 module
-      command: dnf -y module enable postgresql:12
-      register: out
-    - debug: var=out.stdout_lines
+    - name: Install PHP module
+      dnf:
+        name: '@php:7.4'
+        state: present
+
+    - name: Install PostgreSQL module
+      dnf:
+        name: '@postgresql:12'
+        state: present
 
     - name: Set timezone
       timezone:
