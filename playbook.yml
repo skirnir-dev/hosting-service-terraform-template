@@ -153,11 +153,16 @@
     - name: Let's Encrypt
       command: certbot --apache -d {{ server_alias }} -d {{ fqdn }} --email ohkouchi@skirnir.co.jp --agree-tos --keep-until-expiring --non-interactive
       register: out
+      args:
+        creates: "/etc/letsencrypt/live/{{ fqdn }}/fullchain.pem"
     - debug: var=out.stdout_lines
     - name: Let's Encrypt for staging
       command: certbot --apache -d {{ staging }}.{{ fqdn }} --email ohkouchi@skirnir.co.jp --agree-tos --keep-until-expiring --non-interactive
       register: out
+      args:
+        creates: "/etc/letsencrypt/live/{{ staging }}.{{ fqdn }}/fullchain.pem"
     - debug: var=out.stdout_lines
+
     - name: auto update cert keys
       cron:
         name: certbot_renew
