@@ -271,6 +271,28 @@
         dest: /usr/local/bin/composer
         state: link
 
+    - name: Install wp-cli
+      get_url:
+        url: https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+        dest: /usr/local/bin/wp-cli.phar
+        mode: 0755
+
+    - name: Symlink wp-cli.phar
+      file:
+        src: wp-cli.phar
+        dest: /usr/local/bin/wp
+        state: link
+
+    # wp-config.php に以下を設定しておく
+    # define('DISABLE_WP_CRON', true);
+    # - name: wp-cron
+    #   cron:
+    #     name: wp-cron
+    #     cron_file: wp-cron
+    #     user: "{{ username }}"
+    #     minute: "*/5"
+    #     job: "cd /var/www/html/{{ fqdn }}/html/wp && /usr/local/bin/wp cron event run --due-now"
+
     - name: Create SSH directories and files
       file:
         path: "{{ item.path }}"

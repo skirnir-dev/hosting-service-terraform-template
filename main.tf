@@ -111,6 +111,7 @@ module "mackerel" {
   name         = var.fqdn
 }
 
+# ansible-galaxy collection install cloud.terraform
 resource "ansible_host" "web_server" {
   name   = "${var.username}.${var.location}.cloudapp.azure.com"
   groups = ["web"]
