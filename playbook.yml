@@ -156,7 +156,7 @@
         - { regexp: '^post_max_size = 8M$', line: 'post_max_size = 50M' }
         - { regexp: '^expose_php = On$', line: 'expose_php = Off' }
     - name: Let's Encrypt
-      command: certbot --apache -d {{ server_alias }} -d {{ fqdn }} --email ohkouchi@skirnir.co.jp --agree-tos --keep-until-expiring --non-interactive
+      command: certbot --apache -d {{ fqdn }} -d {{ server_alias }} --email ohkouchi@skirnir.co.jp --agree-tos --keep-until-expiring --non-interactive
       register: out
       args:
         creates: "/etc/letsencrypt/live/{{ fqdn }}/fullchain.pem"
