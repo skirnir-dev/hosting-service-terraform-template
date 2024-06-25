@@ -19,6 +19,11 @@
         - { regexp: '^ResourceDisk\.EnableSwap=.*$', line: 'ResourceDisk.EnableSwap=y' }
         - { regexp: '^ResourceDisk\.SwapSizeMB=.*$', line: 'ResourceDisk.SwapSizeMB=3072' }
 
+    - name: import gpg keys
+      shell: 'rpm --import https://repo.almalinux.org/almalinux/RPM-GPG-KEY-AlmaLinux'
+      args:
+        creates: "/etc/pki/rpm-gpg/RPM-GPG-KEY-AlmaLinux"
+
     - name: Install required packages
       dnf:
         name: "{{ packages }}"
