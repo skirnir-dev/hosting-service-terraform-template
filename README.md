@@ -15,3 +15,12 @@
 7. [providers.tf](./providers.tf) 及び [ansible/var_files.yml](./ansible/var_files.yml) を設定
 
 
+### ansible
+
+``` shell
+## terraform.tfstate ファイルを出力しておくと、 terraform ansible プラグインで inventory の情報を生成できる
+terraform state pull > terraform.tfstate
+## ansible/key.yml を暗号化しておく
+ansible-vault encrypt ansible/key.yml
+ansible-playbook -i inventory.yml playbook.yml --diff --ask-vault-pass
+```

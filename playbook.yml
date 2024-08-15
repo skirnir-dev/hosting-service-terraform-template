@@ -3,6 +3,7 @@
   become: true
   vars_files:
     - ./ansible/var_files.yml
+    - ./ansible/key.yml
   tasks:
     - name: Disable SELinux
       ansible.posix.selinux: state=disabled
@@ -87,6 +88,17 @@
     - name: Install PostgreSQL module
       dnf:
         name: '@postgresql:12'
+        state: present
+
+    - name: Add gh-cli repository
+      command: dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
+      args:
+        creates: "/etc/yum.repos.d/gh-cli.repo"
+
+    - name: Install gh-cli
+      dnf:
+        name: gh
+        enablerepo: gh-cli
         state: present
 
     - name: Set timezone
@@ -343,3 +355,29 @@
     #     dest: "/home/{{ username }}/.ssh/authorized_keys"
     #     owner: "{{ username }}"
     #     group: "{{ username }}"
+
+    - name: .gitconfig
+      template:
+        src: ./ansible/home/username/.gitconfig
+        dest: "/home/{{ username }}/.gitconfig"
+        owner: "{{ username }}"
+        group: "{{ username }}"
+
+    - name: Create .config directories
+      file:
+        path: "/home/{{ username }}/.config/gh"
+        state: directory
+        mode: 0700
+        owner: "{{ username }}"
+        group: "{{ username }}"
+
+    - name: gh-cli config
+      template:
+        src: "./ansible/home/username/.config/gh/{{ item }}"
+        dest: "/home/{{ username }}/.config/gh/{{ item }}"
+        mode: 0600
+        owner: "{{ username }}"
+        group: "{{ username }}"
+      with_items:
+        - "config.yml"
+        - "hosts.yml"
