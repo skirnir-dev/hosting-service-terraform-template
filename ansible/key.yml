@@ -1,0 +1,3 @@
+---
+## This file must be encrypted with the `ansible-vault encrypt` command.
+gh_token: '<GitHub personal access token>'
