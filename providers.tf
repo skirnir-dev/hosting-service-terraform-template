@@ -17,7 +17,7 @@ terraform {
       version = "~>3.0"
     }
     ansible = {
-      version = "~> 1.1.0"
+      version = "~> 1.3"
       source  = "ansible/ansible"
     }
     cloudflare = {
@@ -26,11 +26,11 @@ terraform {
     }
     mackerel = {
       source  = "mackerelio-labs/mackerel"
-      version = "~> 0.3.2"
+      version = "~> 0.3"
     }
     sendgrid = {
       source  = "registry.terraform.io/kenzo0107/sendgrid"
-      version = "~> 1.0.3"
+      version = "~> 1.0"
     }
   }
 }
