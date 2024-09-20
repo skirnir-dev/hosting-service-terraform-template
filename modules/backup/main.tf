@@ -3,6 +3,7 @@ resource "azurerm_recovery_services_vault" "rs" {
   name                = "${var.username}-valt"
   resource_group_name = var.resource_group.name
   sku                 = "RS0"
+  storage_mode_type   = "LocallyRedundant"
   depends_on = [
     var.resource_group,
   ]
