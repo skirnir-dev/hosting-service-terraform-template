@@ -339,28 +339,37 @@
         path: /usr/share/httpd/.ssh/known_hosts
         mode: 0444
 
-    - name: Generate SSH key for apache
-      shell: |
-        sudo -u apache ssh-keygen -f /var/www/.ssh/id_rsa -N ''
-      args:
-        creates: "/var/www/.ssh/id_rsa.pub"
+    - name: apache keypair
+      openssh_keypair:
+        owner: apache
+        path: /var/www/.ssh/id_rsa
+        size: 3072
+        comment: "apache@{{ fqdn }}"
+        state: present
+      register: apache_keypair
 
-    - name: register id_rsa.pub
-      shell: cat /var/www/.ssh/id_rsa.pub
-      register: id_rsa_pub
+    - name: nanasess authorized_keys
+      authorized_key:
+        user: "{{ username }}"
+        key: https://github.com/nanasess.keys
+        comment: "ohkouchi@skirnir.co.jp"
+        state: present
 
-    - name: Add authorized_keys entry
-      lineinfile:
-        path: "/home/{{ username }}/.ssh/authorized_keys"
-        line: 'from="127.0.0.1,::1",restrict,pty {{ id_rsa_pub.stdout }}'
-        insertafter: EOF
+    - name: apache authorized_keys
+      authorized_key:
+        user: "{{ username }}"
+        key: "{{ apache_keypair.public_key }}"
+        comment: "apache@{{ fqdn }}"
+        key_options: 'from="127.0.0.1,::1",restrict,pty'
+        state: present
 
-    # - name: authorized_keys
-    #   copy:
-    #     src: ./ansible/home/username/.ssh/authorized_keys
-    #     dest: "/home/{{ username }}/.ssh/authorized_keys"
-    #     owner: "{{ username }}"
-    #     group: "{{ username }}"
+    # - name: users authorized_keys
+    #   authorized_key:
+    #     user: "{{ username }}"
+    #     key: "{{ item }}"
+    #     state: present
+    #   with_items:
+    #     - "ssh-rsa xxxxxxxxxxxxx user@example.com"
 
     - name: .gitconfig
       template:
