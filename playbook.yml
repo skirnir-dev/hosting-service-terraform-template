@@ -161,6 +161,38 @@
         enabled: yes
         state: started
 
+    # - name: Create user with password
+    #   community.mysql.mysql_user:
+    #     state: present
+    #     name: eccube_db
+    #     password: "{{ ec_db_password }}"
+    #     host: "{{ item }}"
+    #     priv:
+    #       'eccube_db.*': 'ALL,GRANT'
+    #   with_items:
+    #     - '%'
+    #     - 'localhost'
+
+    # - name: Create staging user with password
+    #   community.mysql.mysql_user:
+    #     state: present
+    #     name: test_eccube_db
+    #     password: "{{ stg_ec_db_password }}"
+    #     host: "{{ item }}"
+    #     priv:
+    #       'test_eccube_db.*': 'ALL,GRANT'
+    #   with_items:
+    #     - '%'
+    #     - 'localhost'
+
+    # - name: Create a new database
+    #   community.mysql.mysql_db:
+    #     name: "{{ item }}"
+    #     state: present
+    #   with_items:
+    #     - eccube_db
+    #     - test_eccube_db
+
     - name: Update PHP settings
       lineinfile:
         path: /etc/php.ini
