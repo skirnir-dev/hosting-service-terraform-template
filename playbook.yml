@@ -74,6 +74,7 @@
         packages:
           - libssh2
           - libssh2-devel
+          - python3-mysqlclient
 
     - name: Install certbot
       dnf:
