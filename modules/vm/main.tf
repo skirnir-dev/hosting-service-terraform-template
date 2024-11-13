@@ -21,18 +21,12 @@ resource "azurerm_linux_virtual_machine" "vm_web" {
     storage_account_type = "StandardSSD_LRS"
   }
   source_image_reference {
-    offer     = "almalinux"
+    offer     = "almalinux-x86_64"
     publisher = "almalinux"
     sku       = "8-gen2"
     version   = "latest"
-  }
-  plan {
-    name      = "8-gen2"
-    product   = "almalinux"
-    publisher = "almalinux"
   }
   depends_on = [
     var.public_ip
   ]
 }
-
