@@ -21,6 +21,7 @@
         - { regexp: '^ResourceDisk\.SwapSizeMB=.*$', line: 'ResourceDisk.SwapSizeMB=3072' }
 
     - name: remove gpg keys
+      changed_when: false
       rpm_key:
         key: 'https://repo.almalinux.org/almalinux/RPM-GPG-KEY-AlmaLinux'
         state: absent
@@ -226,12 +227,14 @@
         job: certbot renew --post-hook "systemctl reload httpd"
 
     - name: Change permissions
+      changed_when: false
       file:
         path: /var/www/html
         owner: "{{ username }}"
         group: "{{ username }}"
 
     - name: Create hosting directories
+      changed_when: false
       file:
         path: "{{ item }}"
         state: directory
@@ -242,6 +245,7 @@
         - "/var/www/html/{{ staging }}.{{ fqdn }}"
 
     - name: Change permissions
+      changed_when: false
       file:
         path: "/var/www/html/{{ fqdn }}/{{ item.path }}"
         owner: "{{ item.owner }}"
@@ -258,6 +262,7 @@
       - { path: "./data/logs",  owner: "apache" }
 
     - name: Change permissions to staging
+      changed_when: false
       file:
         path: "/var/www/html/{{ staging }}.{{ fqdn }}/{{ item.path }}"
         owner: "{{ item.owner }}"
