@@ -1,5 +1,5 @@
-data "azurerm_ssh_public_key" "github" {
-  name                = "github"
+data "azurerm_ssh_public_key" "ed25519" {
+  name                = "ed25519"
   resource_group_name = var.pubkey_resource_group_name
 }
 resource "azurerm_linux_virtual_machine" "vm_web" {
@@ -11,7 +11,7 @@ resource "azurerm_linux_virtual_machine" "vm_web" {
   size                  = "Standard_B1ms"
   zone                  = "1"
   admin_ssh_key {
-    public_key = data.azurerm_ssh_public_key.github.public_key
+    public_key = data.azurerm_ssh_public_key.ed25519.public_key
     username   = var.username
   }
   boot_diagnostics {
