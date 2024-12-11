@@ -30,7 +30,7 @@ terraform {
     }
     sendgrid = {
       source  = "registry.terraform.io/kenzo0107/sendgrid"
-      version = "~> 1.0"
+      version = "~> 1.4"
     }
   }
 }
