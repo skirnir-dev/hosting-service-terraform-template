@@ -1,4 +1,4 @@
-resource "cloudflare_access_application" "staging" {
+resource "cloudflare_zero_trust_application" "staging" {
   account_id                   = var.account_id
   allowed_idps                 = []
   app_launcher_visible         = true
@@ -18,7 +18,7 @@ resource "cloudflare_access_application" "staging" {
   type                         = "self_hosted"
 }
 
-resource "cloudflare_access_application" "admin" {
+resource "cloudflare_zero_trust_application" "admin" {
   account_id                = var.account_id
   allowed_idps              = []
   app_launcher_visible      = true
@@ -39,7 +39,7 @@ resource "cloudflare_access_application" "admin" {
   type                         = "self_hosted"
 }
 
-resource "cloudflare_access_application" "certbot_skip" {
+resource "cloudflare_zero_trust_application" "certbot_skip" {
   account_id                   = var.account_id
   allowed_idps                 = []
   app_launcher_visible         = true
@@ -53,17 +53,17 @@ resource "cloudflare_access_application" "certbot_skip" {
   http_only_cookie_attribute   = true
   logo_url                     = null
   name                         = "certbot skip"
-  self_hosted_domains = [
-    "${var.staging}.${var.fqdn}/.well-known/acme-challenge",
-  ]
+  service_auth_401_redirect    = false
+  session_duration             = "24h"
+  skip_interstitial            = false
+  type                         = "self_hosted"
 
-  service_auth_401_redirect = false
-  session_duration          = "24h"
-  skip_interstitial         = false
-  type                      = "self_hosted"
+  destinations {
+    uri = "${var.staging}.${var.fqdn}/.well-known/acme-challenge"
+  }
 }
 
-resource "cloudflare_access_group" "allow_email_domain" {
+resource "cloudflare_zero_trust_group" "allow_email_domain" {
   account_id = var.account_id
   name       = "Allow domains"
 
@@ -74,7 +74,7 @@ resource "cloudflare_access_group" "allow_email_domain" {
   }
 }
 
-resource "cloudflare_access_group" "allow_ips_office" {
+resource "cloudflare_zero_trust_group" "allow_ips_office" {
   account_id = var.account_id
   name       = "office"
 
@@ -85,13 +85,13 @@ resource "cloudflare_access_group" "allow_ips_office" {
   }
 }
 
-data "cloudflare_access_identity_provider" "onetimepin" {
+data "cloudflare_zero_trust_identity_provider" "onetimepin" {
   name       = ""
   account_id = var.account_id
 }
 
-resource "cloudflare_access_policy" "staging_bypass_ips" {
-  application_id = cloudflare_access_application.staging.id
+resource "cloudflare_zero_trust_policy" "staging_bypass_ips" {
+  application_id = cloudflare_zero_trust_application.staging.id
   name           = "許可IP"
   precedence     = "1"
   decision       = "bypass"
@@ -99,13 +99,13 @@ resource "cloudflare_access_policy" "staging_bypass_ips" {
 
   include {
     group = [
-      cloudflare_access_group.allow_ips_office.id,
+      cloudflare_zero_trust_group.allow_ips_office.id,
     ]
   }
 }
 
-resource "cloudflare_access_policy" "staging_onetimepin" {
-  application_id = cloudflare_access_application.staging.id
+resource "cloudflare_zero_trust_policy" "staging_onetimepin" {
+  application_id = cloudflare_zero_trust_application.staging.id
   name           = "one-time pin"
   precedence     = "2"
   decision       = "allow"
@@ -113,18 +113,18 @@ resource "cloudflare_access_policy" "staging_onetimepin" {
 
   include {
     login_method = [
-      data.cloudflare_access_identity_provider.onetimepin.id,
+      data.cloudflare_zero_trust_identity_provider.onetimepin.id,
     ]
   }
   require {
     group = [
-      cloudflare_access_group.allow_email_domain.id,
+      cloudflare_zero_trust_group.allow_email_domain.id,
     ]
   }
 }
 
-resource "cloudflare_access_policy" "admin_bypass_ips" {
-  application_id = cloudflare_access_application.admin.id
+resource "cloudflare_zero_trust_policy" "admin_bypass_ips" {
+  application_id = cloudflare_zero_trust_application.admin.id
   name           = "office"
   precedence     = "1"
   decision       = "bypass"
@@ -132,13 +132,13 @@ resource "cloudflare_access_policy" "admin_bypass_ips" {
 
   include {
     group = [
-      cloudflare_access_group.allow_ips_office.id,
+      cloudflare_zero_trust_group.allow_ips_office.id,
     ]
   }
 }
 
-resource "cloudflare_access_policy" "admin_onetimepin" {
-  application_id = cloudflare_access_application.admin.id
+resource "cloudflare_zero_trust_policy" "admin_onetimepin" {
+  application_id = cloudflare_zero_trust_application.admin.id
   name           = "one-time pin"
   precedence     = "2"
   decision       = "allow"
@@ -146,18 +146,18 @@ resource "cloudflare_access_policy" "admin_onetimepin" {
 
   include {
     login_method = [
-      data.cloudflare_access_identity_provider.onetimepin.id,
+      data.cloudflare_zero_trust_identity_provider.onetimepin.id,
     ]
   }
   require {
     group = [
-      cloudflare_access_group.allow_email_domain.id,
+      cloudflare_zero_trust_group.allow_email_domain.id,
     ]
   }
 }
 
-resource "cloudflare_access_policy" "certbot_skip_bypass" {
-  application_id = cloudflare_access_application.certbot_skip.id
+resource "cloudflare_zero_trust_policy" "certbot_skip_bypass" {
+  application_id = cloudflare_zero_trust_application.certbot_skip.id
   account_id     = var.account_id
   name           = "skip"
   precedence     = "1"
