@@ -105,12 +105,6 @@ output "sendgrid_link_branding_dns" {
   value = module.sendgrid.sendgrid_link_branding_dns
 }
 
-module "mackerel" {
-  source       = "./modules/mackerel"
-  external_url = "https://${var.fqdn}"
-  name         = var.fqdn
-}
-
 # ansible-galaxy collection install cloud.terraform
 resource "ansible_host" "web_server" {
   name   = "${var.username}.${var.location}.cloudapp.azure.com"
