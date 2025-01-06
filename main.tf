@@ -111,7 +111,7 @@ resource "ansible_host" "web_server" {
   groups = ["web"]
   variables = {
     ansible_user                 = var.username
-    ansible_ssh_private_key_file = "~/.ssh/id_rsa",
+    ansible_ssh_private_key_file = "~/.ssh/id_ed25519",
     ansible_python_interpreter   = "/usr/bin/python3"
     ansible_become               = "yes"
     ansible_become_method        = "sudo"
