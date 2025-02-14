@@ -24,3 +24,24 @@ terraform state pull > terraform.tfstate
 ansible-vault encrypt ansible/key.yml
 ansible-playbook -i inventory.yml playbook.yml --diff --ask-vault-pass
 ```
+
+### WordPress の自動更新を設定する
+
+```php
+// wp-config.php
+define('FS_METHOD', 'ssh2');
+define('FTP_BASE', '/path/to/wp/');
+define('FTP_CONTENT_DIR', '/path/to/wp/wp-content/');
+define('FTP_PLUGIN_DIR ', '/path/to/wp/wp-content/plugins/');
+define('FTP_PUBKEY', '/var/www/.ssh/id_rsa.pub');
+define('FTP_PRIKEY', '/var/www/.ssh/id_rsa');
+define('FTP_USER', '${adminUsername}');
+define('FTP_HOST', 'localhost');
+```
+
+#### WordPress を Git で管理している場合は以下を追加
+
+```php
+// wp-content/themes/themeName/functions.php
+add_filter( 'automatic_updates_is_vcs_checkout', '__return_false', 1 );
+```
