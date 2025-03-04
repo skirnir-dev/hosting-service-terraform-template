@@ -1,5 +1,7 @@
 ---
 ## This file must be encrypted with the `ansible-vault encrypt` command.
 gh_token: '<GitHub personal access token>'
+git_config_email: 'user@example.com'
+git_config_name: '<User Fullname>'
 ec_db_password: '<eccube_db_password>'
 stg_ec_db_password: '<stg_eccube_db_password>'
