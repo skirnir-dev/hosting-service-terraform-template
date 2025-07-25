@@ -110,3 +110,7 @@ Gitで管理している場合は自動更新を許可：
 ```php
 add_filter( 'automatic_updates_is_vcs_checkout', '__return_false', 1 );
 ```
+
+## cf-terraforming によるインポートプロンプト
+
+- `@modules/cloudflare_dns/import-cf-terraforming.md` を参照してください
