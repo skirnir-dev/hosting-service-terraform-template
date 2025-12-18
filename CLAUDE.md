@@ -11,7 +11,11 @@ AzureのVMベースのホスティングサービスをTerraformとAnsibleで構
 ### Terraform操作
 
 ```bash
-# Terraform Cloud経由でデプロイ
+# ローカル開発での実行（1Password CLI で secrets を取得）
+export TF_VAR_cloudflare_api_token=$(op read "op://<project>-infrastructure/terraform-secrets/cloudflare_api_token")
+export TF_VAR_sendgrid_api_key=$(op read "op://<project>-infrastructure/terraform-secrets/sendgrid_api_key")
+export TF_VAR_mackerel_api_key=$(op read "op://<project>-infrastructure/terraform-secrets/mackerel_api_key")
+
 terraform init
 terraform plan
 terraform apply
@@ -49,6 +53,7 @@ cf-terraforming generate --resource-type "cloudflare_record" >> imports.tf
 
 ### Terraformモジュール構成
 
+- **modules/github_actions/**: GitHub Actions OIDC認証、Terraform state用Storage Account
 - **modules/vm/**: Azure VMとその関連リソース（OS disk、SSH key）を作成
 - **modules/networks/**: VNet、サブネット、NSG、パブリックIPを管理
 - **modules/backup/**: Recovery Services VaultとVMバックアップポリシーを設定
@@ -73,22 +78,53 @@ playbook.ymlで以下の構成を行います：
 
 ### 重要な設定ファイル
 
-- **providers.tf**: Terraform Cloudとプロバイダーの設定
-- **variables.tf**: 変数定義（fqdn、username、location等）
+- **providers.tf**: Azure Storage BackendとProviderの設定
+- **variables.tf**: 変数定義（project_name、fqdn、username、location等）
 - **ansible/var_files.yml**: Ansible変数（プロジェクト固有の設定）
 - **ansible/key.yml**: 暗号化された秘密情報（DB パスワード等）
 - **inventory.yml**: Terraformの状態から動的にインベントリを生成
 
-## 新規プロジェクトセットアップ手順
+## Backend設定（Azure Storage）
 
-1. リポジトリをテンプレートから作成
-2. Terraform Cloudでworkspaceを作成
-3. 必要な認証情報を設定（Azure、Cloudflare、SendGrid等）
-4. providers.tfのworkspace名を更新
-5. variables.tfでプロジェクト固有の値を設定
-6. ansible/var_files.ymlを編集
-7. Terraformでインフラをデプロイ
-8. Ansibleでサーバーを構成
+### 認証方法
+
+**GitHub Actions (CI/CD)**:
+- Azure OIDC認証を使用（Service Principal）
+- 1Password Service Account で secrets 管理
+
+**ローカル開発**:
+- Azure CLI認証（`az login`）
+- 1Password CLI で secrets 取得
+
+### 1Password Vault 構成
+
+**共通 Vault（skirnir-workload-identity）**:
+- `azure-common-credentials`: AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID
+
+**プロジェクト専用 Vault（<project>-infrastructure）**:
+- `azure-credentials`: AZURE_CLIENT_ID
+- `terraform-secrets`: cloudflare_api_token, sendgrid_api_key, mackerel_api_key
+
+## 新規プロジェクトセットアップ
+
+詳細は [README.md](./README.md) を参照してください。
+
+### 概要
+
+1. テンプレートからリポジトリを作成
+2. Service Principal を手動作成（Bootstrap用）
+3. 1Password Vault、Service Account を作成
+4. GitHub Environment、Secret を設定
+5. variables.tf、providers.tf を更新
+6. Bootstrap実行（local backend → azurerm backend）
+7. PR作成、Plan/Apply検証
+
+### Bootstrap時のtargetリソース
+
+```bash
+terraform apply \
+  -target=module.github_actions
+```
 
 ## WordPress固有の設定
 
@@ -114,3 +150,24 @@ add_filter( 'automatic_updates_is_vcs_checkout', '__return_false', 1 );
 ## cf-terraforming によるインポートプロンプト
 
 - `@modules/cloudflare_dns/import-cf-terraforming.md` を参照してください
+
+## トラブルシューティング
+
+### よくある問題
+
+1. **Azure認証エラー**
+   - GitHub Actions: `OP_SERVICE_ACCOUNT_TOKEN`シークレットを確認
+   - ローカル: `az login`で再認証、または1Password CLIで認証情報を再取得
+
+2. **Backend初期化エラー**
+   - Storage Accountが存在することを確認
+   - Azure CLI認証が有効であることを確認
+   - Service Principalに`Storage Blob Data Contributor`権限があることを確認
+
+3. **1Password認証エラー**
+   - ローカル: `op signin`で再認証
+   - GitHub Actions: Service Accountトークンの有効期限を確認
+
+4. **GitHub Actions OIDC エラー**
+   - `ARM_USE_OIDC=true`が設定されていることを確認
+   - Federated Identity Credentialのsubjectが正しいことを確認
