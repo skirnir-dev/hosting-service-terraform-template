@@ -270,6 +270,7 @@ add_filter( 'automatic_updates_is_vcs_checkout', '__return_false', 1 );
 │   ├── azure_dns/         # Azure DNS
 │   ├── backup/            # Recovery Services Vault
 │   ├── cloudflare_dns/    # Cloudflare DNS
+│   ├── github_actions/    # GitHub Actions OIDC, Storage Account
 │   ├── insights/          # Application Insights
 │   ├── mackerel/          # Mackerel 監視
 │   ├── networks/          # VNet, Subnet, NSG
@@ -277,7 +278,6 @@ add_filter( 'automatic_updates_is_vcs_checkout', '__return_false', 1 );
 │   ├── vm/                # Virtual Machine
 │   ├── waf/               # Cloudflare WAF
 │   └── zero_trust/        # Cloudflare Zero Trust
-├── ci-cd.tf               # Service Principal, Storage Account
 ├── main.tf                # メインリソース定義
 ├── providers.tf           # Provider と Backend 設定
 ├── variables.tf           # 変数定義

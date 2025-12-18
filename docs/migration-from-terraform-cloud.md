@@ -220,7 +220,12 @@ mkdir -p .github/workflows
 cp ../hosting-service-terraform-template/.github/workflows/terraform.yml .github/workflows/
 
 # <project> を実際のプロジェクト名に置換
+# Linux の場合:
 sed -i "s/<project>/${PROJECT_NAME}/g" .github/workflows/terraform.yml
+# macOS の場合:
+# sed -i '' "s/<project>/${PROJECT_NAME}/g" .github/workflows/terraform.yml
+# または、両環境で動作する perl を使用:
+# perl -pi -e "s/<project>/${PROJECT_NAME}/g" .github/workflows/terraform.yml
 ```
 
 ## Phase 6: Bootstrap 実行
@@ -258,7 +263,7 @@ import {
 
 import {
   to = module.github_actions.azuread_application_federated_identity_credential.github_actions
-  id = "<APP_ID>/federatedIdentityCredential/<CREDENTIAL_ID>"
+  id = "<APP_OBJECT_ID>/federatedIdentityCredential/<CREDENTIAL_ID>"
 }
 
 import {

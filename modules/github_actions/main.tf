@@ -23,7 +23,7 @@ resource "azuread_application" "terraform" {
 }
 
 resource "azuread_service_principal" "terraform" {
-  client_id = azuread_application.terraform.client_id
+  application_id = azuread_application.terraform.client_id
 }
 
 resource "azuread_application_federated_identity_credential" "github_actions" {
