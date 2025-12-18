@@ -1,12 +1,18 @@
 name: Terraform
 
+# NOTE: このテンプレートリポジトリでは CI/CD は無効化されています
+# 新規プロジェクトで使用する際は、以下のコメントを解除してください
+#
+# on:
+#   push:
+#     branches:
+#       - main
+#   pull_request:
+#     branches:
+#       - main
+
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+  workflow_dispatch:  # 手動実行のみ有効
 
 permissions:
   id-token: write
