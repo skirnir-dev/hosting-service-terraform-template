@@ -1,3 +1,8 @@
+variable "project_name" {
+  description = "Project name for CI/CD resources (e.g., 'example' creates 'example-terraform' SP, 'stateexample' Storage Account)"
+  type        = string
+  default     = "example"
+}
 variable "fqdn" {
   default = "example.com"
   type    = string

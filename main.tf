@@ -2,6 +2,26 @@ resource "azurerm_resource_group" "rg" {
   location = var.location
   name     = var.fqdn
 }
+
+# =============================================================================
+# GitHub Actions CI/CD Infrastructure
+# =============================================================================
+module "github_actions" {
+  source         = "./modules/github_actions"
+  project_name   = var.project_name
+  resource_group = azurerm_resource_group.rg
+}
+
+output "azure_client_id" {
+  value       = module.github_actions.azure_client_id
+  description = "Azure AD Application (Client) ID - Save to 1Password"
+  sensitive   = true
+}
+
+output "storage_account_name" {
+  value       = module.github_actions.storage_account_name
+  description = "Storage Account name for providers.tf backend configuration"
+}
 module "virtual_machine" {
   source                     = "./modules/vm"
   resource_group             = azurerm_resource_group.rg
