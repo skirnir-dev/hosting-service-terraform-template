@@ -6,9 +6,11 @@
     - ./ansible/key.yml
   tasks:
     - name: Disable SELinux
+      tags: [bootstrap]
       ansible.posix.selinux: state=disabled
 
     - name: Update waagent.conf
+      tags: [bootstrap]
       lineinfile:
         path: /etc/waagent.conf
         regexp: "{{ item.regexp }}"
@@ -21,16 +23,19 @@
         - { regexp: '^ResourceDisk\.SwapSizeMB=.*$', line: 'ResourceDisk.SwapSizeMB=3072' }
 
     - name: remove gpg keys
+      tags: [bootstrap, packages]
       changed_when: false
       rpm_key:
         key: 'https://repo.almalinux.org/almalinux/RPM-GPG-KEY-AlmaLinux'
         state: absent
     - name: import gpg keys
+      tags: [bootstrap, packages]
       rpm_key:
         key: 'https://repo.almalinux.org/almalinux/RPM-GPG-KEY-AlmaLinux'
         state: present
 
     - name: Install required packages
+      tags: [packages]
       dnf:
         name: "{{ packages }}"
         state: present
@@ -63,11 +68,13 @@
           - postgresql-server
 
     - name: Install EPEL repository
+      tags: [packages]
       dnf:
         name: epel-release
         state: present
 
     - name: Install EPEL packages
+      tags: [packages]
       dnf:
         name: "{{ packages }}"
         state: present
@@ -78,6 +85,7 @@
           - python3-mysqlclient
 
     - name: Install certbot
+      tags: [packages, certbot]
       dnf:
         name: "{{ packages }}"
         state: present
@@ -87,36 +95,43 @@
           - python3-certbot-apache
 
     - name: Install PHP module
+      tags: [packages, php]
       dnf:
         name: '@php:7.4'
         state: present
 
     - name: Install PostgreSQL module
+      tags: [packages, postgres]
       dnf:
         name: '@postgresql:12'
         state: present
 
     - name: Add gh-cli repository
+      tags: [packages, gh]
       command: dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
       args:
         creates: "/etc/yum.repos.d/gh-cli.repo"
 
     - name: Install gh-cli
+      tags: [packages, gh]
       dnf:
         name: gh
         enablerepo: gh-cli
         state: present
 
     - name: Set timezone
+      tags: [bootstrap]
       timezone:
         name: Asia/Tokyo
 
     - name: pecl install ssh2
+      tags: [php]
       shell: 'echo "autodetect" | pecl install channel://pecl.php.net/ssh2-1.3.1'
       args:
         creates: "/usr/lib64/php/modules/ssh2.so"
 
     - name: ssh2.ini
+      tags: [php]
       copy:
         src: ./ansible/etc/php.d/40-ssh2.ini
         dest: /etc/php.d/40-ssh2.ini
@@ -124,40 +139,47 @@
         group: root
 
     - name: Enable and start MariaDB
+      tags: [mariadb]
       systemd:
         name: mariadb.service
         enabled: yes
         state: started
 
     - name: Enable and start Apache
+      tags: [httpd]
       systemd:
         name: httpd.service
         enabled: yes
         state: started
 
     - name: Enable and start PHP-FPM
+      tags: [php]
       systemd:
         name: php-fpm.service
         enabled: yes
         state: started
 
     - name: Upgrade all packages
+      tags: [packages, upgrade]
       dnf:
         name: "*"
         state: latest
 
     - name: initdb
+      tags: [postgres]
       shell: "postgresql-setup --initdb"
       args:
         creates: "/var/lib/pgsql/data/PG_VERSION"
 
     - name: Update PostgreSQL settings
+      tags: [postgres]
       replace:
         path: /var/lib/pgsql/data/pg_hba.conf
         regexp: '^host(\s+all)(.*)ident$'
         replace: 'host\1\2md5'
 
     - name: Enable and start PostgreSQL
+      tags: [postgres]
       systemd:
         name: postgresql.service
         enabled: yes
@@ -196,6 +218,7 @@
     #     - test_eccube_db
 
     - name: Update PHP settings
+      tags: [php]
       lineinfile:
         path: /etc/php.ini
         regexp: "{{ item.regexp }}"
@@ -206,12 +229,14 @@
         - { regexp: '^post_max_size = 8M$', line: 'post_max_size = 50M' }
         - { regexp: '^expose_php = On$', line: 'expose_php = Off' }
     - name: Let's Encrypt
+      tags: [certbot]
       command: certbot --apache -d {{ fqdn }} -d {{ server_alias }} --email ohkouchi@skirnir.co.jp --agree-tos --keep-until-expiring --non-interactive
       register: out
       args:
         creates: "/etc/letsencrypt/live/{{ fqdn }}/fullchain.pem"
     - debug: var=out.stdout_lines
     - name: Let's Encrypt for staging
+      tags: [certbot]
       command: certbot --apache -d {{ staging }}.{{ fqdn }} --email ohkouchi@skirnir.co.jp --agree-tos --keep-until-expiring --non-interactive
       register: out
       args:
@@ -219,6 +244,7 @@
     - debug: var=out.stdout_lines
 
     - name: auto update cert keys
+      tags: [certbot]
       cron:
         name: certbot_renew
         cron_file: certbot_renew
@@ -227,14 +253,14 @@
         job: certbot renew --post-hook "systemctl reload httpd"
 
     - name: Change permissions
-      changed_when: false
+      tags: [permissions]
       file:
         path: /var/www/html
         owner: "{{ username }}"
         group: "{{ username }}"
 
     - name: Create hosting directories
-      changed_when: false
+      tags: [hosting]
       file:
         path: "{{ item }}"
         state: directory
@@ -244,41 +270,23 @@
         - "/var/www/html/{{ fqdn }}"
         - "/var/www/html/{{ staging }}.{{ fqdn }}"
 
-    - name: Change permissions
-      changed_when: false
-      file:
-        path: "/var/www/html/{{ fqdn }}/{{ item.path }}"
-        owner: "{{ item.owner }}"
-        group: "{{ item.owner }}"
-        mode: u=rwX,g=rX,o=rX
-        recurse: yes
-      with_items:
-      - { path: "./", owner: "{{ username }}" }
-      - { path: "./html/upload", owner: "apache" }
-      - { path: "./data/Smarty/templates_c", owner: "apache" }
-      # - { path: "./data/download", owner: "apache" }
-      - { path: "./data/cache", owner: "apache" }
-      - { path: "./data/upload", owner: "apache" }
-      - { path: "./data/logs",  owner: "apache" }
-
-    - name: Change permissions to staging
-      changed_when: false
-      file:
-        path: "/var/www/html/{{ staging }}.{{ fqdn }}/{{ item.path }}"
-        owner: "{{ item.owner }}"
-        group: "{{ item.owner }}"
-        mode: u=rwX,g=rX,o=rX
-        recurse: yes
-      with_items:
-      - { path: "./", owner: "{{ username }}" }
-      - { path: "./html/upload", owner: "apache" }
-      - { path: "./data/Smarty/templates_c", owner: "apache" }
-      # - { path: "./data/download", owner: "apache" }
-      - { path: "./data/cache", owner: "apache" }
-      - { path: "./data/upload", owner: "apache" }
-      - { path: "./data/logs",  owner: "apache" }
+    # EC-CUBE 系の構成 (html/upload, data/Smarty/templates_c, data/cache, data/upload,
+    # data/logs) を想定したディレクトリ権限を収束させる。
+    #
+    # apache が書き込む必要のあるディレクトリは ansible/var_files.yml の
+    # apache_writable_dirs に定義し、それ以外は docroot 全体が {{ username }} 所有になる。
+    # 実体と設計の経緯は ansible/tasks/site_permissions.yml 冒頭のコメントを参照。
+    - name: Converge directory permissions (production / staging)
+      ansible.builtin.include_tasks: ./ansible/tasks/site_permissions.yml
+      loop:
+        - "/var/www/html/{{ fqdn }}"
+        - "/var/www/html/{{ staging }}.{{ fqdn }}"
+      loop_control:
+        loop_var: site_root
+      tags: [permissions]
 
     - name: dirs.conf
+      tags: [httpd]
       copy:
         src: ./ansible/etc/httpd/conf.d/dirs.conf
         dest: /etc/httpd/conf.d/dirs.conf
@@ -286,6 +294,7 @@
         group: root
 
     - name: VirtualHost directives
+      tags: [httpd, vhost]
       template:
         src: ./ansible/etc/httpd/conf.d/fqdn.conf
         dest: /etc/httpd/conf.d/{{ fqdn }}.conf
@@ -293,6 +302,7 @@
         group: root
 
     - name: VirtualHost le-ssl directives
+      tags: [httpd, vhost]
       template:
         src: ./ansible/etc/httpd/conf.d/fqdn-le-ssl.conf
         dest: /etc/httpd/conf.d/{{ fqdn }}-le-ssl.conf
@@ -300,6 +310,7 @@
         group: root
 
     - name: VirtualHost staging directives
+      tags: [httpd, vhost]
       template:
         src: ./ansible/etc/httpd/conf.d/staging.conf
         dest: /etc/httpd/conf.d/{{ staging }}.{{ fqdn }}.conf
@@ -307,6 +318,7 @@
         group: root
 
     - name: VirtualHost staging-le-ssl directives
+      tags: [httpd, vhost]
       template:
         src: ./ansible/etc/httpd/conf.d/staging-le-ssl.conf
         dest: /etc/httpd/conf.d/{{ staging }}.{{ fqdn }}-le-ssl.conf
@@ -314,12 +326,14 @@
         group: root
 
     - name: Reload service httpd, in all cases
+      tags: [httpd]
       service:
         name: httpd
         state: reloaded
 
     ## see https://gist.github.com/onlime/8767e4e86d4205e32fbe354c8bea626c
     - name: Composer | Install Composer latest-stable
+      tags: [tools, composer]
       get_url:
         url: https://getcomposer.org/download/latest-stable/composer.phar
         checksum: 'sha256:https://getcomposer.org/download/latest-stable/composer.phar.sha256sum'
@@ -327,18 +341,21 @@
         mode: 0755
 
     - name: Composer | Symlink composer.phar
+      tags: [tools, composer]
       file:
         src: composer.phar
         dest: /usr/local/bin/composer
         state: link
 
     - name: Install wp-cli
+      tags: [tools, wpcli]
       get_url:
         url: https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
         dest: /usr/local/bin/wp-cli.phar
         mode: 0755
 
     - name: Symlink wp-cli.phar
+      tags: [tools, wpcli]
       file:
         src: wp-cli.phar
         dest: /usr/local/bin/wp
@@ -355,6 +372,7 @@
     #     job: "cd /var/www/html/{{ fqdn }}/html/wp && /usr/local/bin/wp cron event run --due-now"
 
     - name: Create SSH directories and files
+      tags: [ssh]
       file:
         path: "{{ item.path }}"
         state: directory
@@ -367,17 +385,20 @@
         - { path: "/home/{{ username }}/.ssh", owner: "{{ username }}", group: "{{ username }}" }
 
     - name: Add localhost to known_hosts
+      tags: [ssh]
       shell: |
         ssh-keyscan localhost | tee -a /usr/share/httpd/.ssh/known_hosts
       args:
         creates: "/usr/share/httpd/.ssh/known_hosts"
 
     - name: Set permissions on known_hosts
+      tags: [ssh]
       file:
         path: /usr/share/httpd/.ssh/known_hosts
         mode: 0444
 
     - name: apache keypair
+      tags: [ssh]
       openssh_keypair:
         owner: apache
         path: /var/www/.ssh/id_rsa
@@ -387,6 +408,7 @@
       register: apache_keypair
 
     - name: nanasess authorized_keys
+      tags: [ssh]
       authorized_key:
         user: "{{ username }}"
         key: https://github.com/nanasess.keys
@@ -394,6 +416,7 @@
         state: present
 
     - name: apache authorized_keys
+      tags: [ssh]
       authorized_key:
         user: "{{ username }}"
         key: "{{ apache_keypair.public_key }}"
@@ -410,6 +433,7 @@
     #     - "ssh-rsa xxxxxxxxxxxxx user@example.com"
 
     - name: .gitconfig
+      tags: [userconf]
       template:
         src: ./ansible/home/username/.gitconfig
         dest: "/home/{{ username }}/.gitconfig"
@@ -417,6 +441,7 @@
         group: "{{ username }}"
 
     - name: Create .config directories
+      tags: [gh]
       file:
         path: "/home/{{ username }}/.config/gh"
         state: directory
@@ -425,6 +450,7 @@
         group: "{{ username }}"
 
     - name: gh-cli config
+      tags: [gh]
       template:
         src: "./ansible/home/username/.config/gh/{{ item }}"
         dest: "/home/{{ username }}/.config/gh/{{ item }}"

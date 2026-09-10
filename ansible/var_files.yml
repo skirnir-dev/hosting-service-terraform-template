@@ -5,3 +5,19 @@ username: 'user'
 staging: 'test-user'
 git_config_email: 'user@example.com'
 git_config_name: 'User Name'
+
+# apache が書き込む必要があるディレクトリ (docroot からの相対パス)。
+# ansible/tasks/site_permissions.yml が「{{ username }} 所有を強制する範囲」から
+# 除外する対象でもあるので、両者は必ず一致させること。空リストは不可。
+#
+# ここに無いパスは docroot 全体が {{ username }} 所有になる。たとえば管理画面から
+# 画像を登録せず SSH でアップロードする運用のサイトでは html/upload を外すこと
+# (apache 所有のままだと SSH で上げたファイルを上書き・削除できなくなる)。
+apache_writable_dirs:
+  - html/upload
+  - data/Smarty/templates_c
+  - data/cache
+  - data/upload
+  - data/logs
+  # - data/download
+  # - html/book/wp-content   # WordPress を同居させる場合

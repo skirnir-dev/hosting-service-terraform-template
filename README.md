@@ -231,9 +231,38 @@ terraform state pull > terraform.tfstate
 # 秘密情報を暗号化
 ansible-vault encrypt ansible/key.yml
 
+# まず dry-run で影響を確認する (本番適用の前に必ず実施し、結果をレビューすること)
+ansible-playbook -i inventory.yml playbook.yml --diff --check --ask-vault-pass
+
 # Playbook を実行
 ansible-playbook -i inventory.yml playbook.yml --diff --ask-vault-pass
+
+# タグで範囲を絞る (--list-tags で一覧を確認できる)
+ansible-playbook -i inventory.yml playbook.yml --diff --tags permissions --ask-vault-pass
 ```
+
+### タグ
+
+全タスクにタグが付いているので、`--tags` / `--skip-tags` で範囲を絞れます。`--start-at-task` は指定タスクから最後まで全部走るため、目的外のタスク (パッケージ更新など) を巻き込みます。範囲を絞りたいときはタグを使ってください。
+
+| タグ | 対象 |
+|---|---|
+| `bootstrap` | SELinux / waagent / GPG キー / タイムゾーン |
+| `packages` | dnf でのパッケージ導入。`upgrade` は全パッケージ更新のみ |
+| `php` / `mariadb` / `postgres` | 各ミドルウェアの設定と起動 |
+| `httpd` / `vhost` | Apache 本体と VirtualHost |
+| `certbot` | Let's Encrypt の取得と更新 cron |
+| `hosting` / `permissions` | 配信ディレクトリの作成と権限収束 |
+| `tools` / `composer` / `wpcli` | Composer / wp-cli |
+| `ssh` / `gh` / `userconf` | SSH 鍵・known_hosts、gh CLI 設定、.gitconfig |
+
+### ディレクトリ権限
+
+`apache` が書き込む必要のあるディレクトリは `ansible/var_files.yml` の `apache_writable_dirs` に定義します。**ここに無いパスは docroot 全体が `username` 所有**になります。
+
+管理画面から画像を登録せず SSH でアップロードする運用のサイトでは、`html/upload` をこのリストから外してください。`apache` 所有のままだと SSH で上げたファイルを上書き・削除できなくなります。
+
+権限収束の実体は `ansible/tasks/site_permissions.yml` です。「検知」と「強制」を分け、強制するパスを互いに素にしてあるため、**ドリフトが無ければ `changed` が出ず、あれば該当パスが名指しで出力されます**。検知タスクは読み取りのみなので `--check` でも実行され、dry-run の時点でドリフトが見えます。
 
 ## WordPress の自動更新設定
 

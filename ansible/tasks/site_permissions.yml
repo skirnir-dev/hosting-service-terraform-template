@@ -1,0 +1,115 @@
+---
+# サイト 1 つ分 (docroot 1 つ分) のディレクトリ権限を収束させる。
+# 呼び出し側で loop_control.loop_var: site_root に docroot の絶対パスを渡すこと。
+# 必要な変数: site_root / username / apache_writable_dirs (空リスト不可)
+#
+# ─── なぜこの構造なのか ───
+# 以前は 1 つの file タスクに with_items で
+#   - { path: "./",           owner: "{{ username }}" }   ← 再帰で docroot 全体
+#   - { path: "./data/cache", owner: "apache" }           ← ./ の部分集合
+# を並べていた。両者が**重なっている**ため、毎回
+#   `./` が apache 管理ディレクトリを {{ username }} 所有へ書き換える
+#     → 後続 item が apache 所有へ戻す
+# を繰り返し、実際のドリフトの有無に関わらず必ず changed になっていた。
+#
+# その結果、選べるのは次の二択だけで、どちらもドリフトを検知できなかった:
+#   - changed_when: false で潰す  → 権限の変更が --check --diff にも本適用の出力にも
+#                                   一切現れない (完全に不可視)
+#   - 抑止しない                  → 常に changed になり、本物のドリフトが騒音に埋もれる
+# 沈黙と騒音は同じ原因の裏表なので、報告フラグの調整では解決しない。
+#
+# そこで「検知」と「強制」を分け、強制するパスを互いに素にした。所有者と mode は
+# それぞれ別タスクなので、片方が changed でももう片方の信号は濁らない。
+# file モジュールは「除外付き再帰」を表現できず、かつ再帰が遅い (実測で約 78000
+# ファイルに約 110 秒) ため、検知は find で行う (同じ範囲を 0.3 秒で走査できる)。
+#
+# 検知タスクは読み取りのみなので check_mode: false を付け、--check --diff の時点で
+# ドリフトが見えるようにしてある。修正タスクは shell なので check mode では自動的に
+# スキップされ、dry-run で誤って直してしまうことはない。
+
+- name: "Build find expressions for {{ site_root }}"
+  ansible.builtin.set_fact:
+    # apache 管理ディレクトリを走査対象から外す。所有者の強制範囲と一致させるため。
+    perm_prune_expr: >-
+      \( {% for d in apache_writable_dirs %}-path {{ (site_root ~ '/' ~ d) | quote }}{{ ' -o ' if not loop.last else '' }}{% endfor %} \) -prune -o
+    # 所有者が {{ username }}:{{ username }} でないもの
+    perm_owner_expr: >-
+      \( ! -user {{ username | quote }} -o ! -group {{ username | quote }} \)
+    # mode が u=rwX,g=rX,o=rX に一致しないもの。X (条件付き実行ビット) の意味に合わせ、
+    # 「一部の triad にだけ x があるファイル」も対象に含める (chmod で 3 つとも x になるため)。
+    perm_mode_expr: >-
+      \( -perm /022 -o ! -perm -600 -o ! -perm -044 -o -perm /7000
+      -o \( -type d ! -perm -111 \) -o \( -type f -perm /111 ! -perm -111 \) \)
+  tags: [permissions]
+
+# ─── 所有者 ───
+
+- name: "Detect ownership drift under {{ site_root }}"
+  ansible.builtin.shell:
+    cmd: "find {{ site_root | quote }} {{ perm_prune_expr }} {{ perm_owner_expr }} -print"
+  register: owner_drift
+  changed_when: false
+  check_mode: false
+  tags: [permissions]
+
+- name: "Report ownership drift under {{ site_root }}"
+  ansible.builtin.debug:
+    msg: >-
+      {{ username }} 所有でないパスが {{ owner_drift.stdout_lines | length }} 件:
+      {{ owner_drift.stdout_lines[:20] }}{{ ' (以下省略)' if owner_drift.stdout_lines | length > 20 else '' }}
+  when: owner_drift.stdout | length > 0
+  tags: [permissions]
+
+- name: "Fix ownership drift under {{ site_root }}"
+  ansible.builtin.shell:
+    cmd: >-
+      find {{ site_root | quote }} {{ perm_prune_expr }} {{ perm_owner_expr }}
+      -exec chown -h {{ (username ~ ':' ~ username) | quote }} {} +
+  when: owner_drift.stdout | length > 0
+  tags: [permissions]
+
+# ─── mode ───
+# apache 管理ディレクトリも対象に含める (従来の `./` の再帰と同じ範囲)。
+# アプリケーションが実行時に 666 でファイルを作る場合 (EC-CUBE のログや CSV 出力など)、
+# このタスクはサイト稼働中に頻繁に changed になる。恒久的に静かにしたい場合は
+# php-fpm / apache 側の umask を 022 に寄せること。所有者の検知は別タスクなので、
+# ここが changed でも所有者ドリフトの信号は濁らない。
+
+- name: "Detect mode drift under {{ site_root }}"
+  ansible.builtin.shell:
+    cmd: "find {{ site_root | quote }} {{ perm_mode_expr }} -print"
+  register: mode_drift
+  changed_when: false
+  check_mode: false
+  tags: [permissions]
+
+- name: "Report mode drift under {{ site_root }}"
+  ansible.builtin.debug:
+    msg: >-
+      u=rwX,g=rX,o=rX に一致しないパスが {{ mode_drift.stdout_lines | length }} 件:
+      {{ mode_drift.stdout_lines[:20] }}{{ ' (以下省略)' if mode_drift.stdout_lines | length > 20 else '' }}
+  when: mode_drift.stdout | length > 0
+  tags: [permissions]
+
+- name: "Fix mode drift under {{ site_root }}"
+  ansible.builtin.shell:
+    cmd: >-
+      find {{ site_root | quote }} {{ perm_mode_expr }}
+      -exec chmod u=rwX,g=rX,o=rX {} +
+  when: mode_drift.stdout | length > 0
+  tags: [permissions]
+
+# ─── apache 管理ディレクトリ ───
+# 上の 2 つと重ならないので file モジュールで再帰適用してよい (対象が小さく高速)。
+
+- name: "Grant apache ownership on writable dirs under {{ site_root }}"
+  ansible.builtin.file:
+    path: "{{ site_root }}/{{ item }}"
+    owner: apache
+    group: apache
+    recurse: true
+  loop: "{{ apache_writable_dirs }}"
+  # サイトによっては存在しないパス (WordPress 未導入時の html/book/wp-content など) を
+  # 許容する。失敗時は "...ignoring" が出力されるので不可視にはならない。
+  ignore_errors: true
+  tags: [permissions]

@@ -73,6 +73,10 @@ playbook.ymlで以下の構成を行います：
 2. **パッケージインストール**: Apache、PHP、MariaDB、PostgreSQL、必要なツール群
 3. **SSL証明書**: Let's Encryptで本番・ステージング環境の証明書を取得
 4. **Webサーバー設定**: VirtualHost設定、ディレクトリ権限設定
+
+ディレクトリ権限は `ansible/tasks/site_permissions.yml` が担当します。`apache` が書き込むディレクトリを `ansible/var_files.yml` の `apache_writable_dirs` に定義し、それ以外は docroot 全体が `username` 所有になります。**「検知」と「強制」を分け、強制するパスを互いに素にしてある**ので、ドリフトが無ければ `changed` は出ません。`changed_when: false` で握りつぶす実装に戻さないこと (変更が `--check --diff` にも本適用の出力にも現れなくなり、権限ドリフトを検知できなくなります)。
+
+全タスクにタグが付いているので、範囲を絞るときは `--start-at-task` ではなく `--tags` を使ってください (`--start-at-task` は指定タスクから最後まで全部走ります)。
 5. **WordPress対応**: wp-cli、SSH2拡張（自動更新用）のインストール
 6. **開発ツール**: Composer、GitHub CLI、Git設定
 
